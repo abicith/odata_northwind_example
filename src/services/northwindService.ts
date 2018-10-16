@@ -5,12 +5,41 @@ import { JsonOnlyPayload } from '../models/JsonOnlyPayload';
 import { ProductsListModel, ProductSummary } from '../models/northwindModel';
 import { NorthwindOrdersModel } from '../models/northwindModel';
 import { ObjectMapper } from 'json-object-mapper';
-import { CarrierListModel, FlightListModel } from '../models/carriersModel';
+import { CarrierListModel, FlightListModel, FlightModel } from '../models/carriersModel';
 import { UserDeets } from '../../user_details';
 
 @Service()
 export class NorthwindService {
     private newLine = require('os').EOL;
+
+    public async getFlight(
+        request: express.Request,
+        Carrid: string,
+        Connid: string,
+        Fldate: string
+    ): Promise<JsonOnlyPayload<FlightModel>> {
+        const authHeader = {
+            channel: 'acos',
+            'user-id': request.headers['iv-user'] as string
+        };
+        const loginDeets = new UserDeets;
+        const options = {
+            proxy: 'http://haproxy.csda.gov.au:8080',
+            strictSSL: false,
+            url: `${loginDeets.url}/ZSFLIGHT_PROJECT2_SRV/Flights(Carrid='${Carrid}',Connid='${Connid}',Fldate=datetime'${Fldate}')`,
+            auth: {
+                'user': loginDeets.uname,
+                'pass': loginDeets.pword,
+                'sendImmediately': true
+            },
+            qs: {$format: 'json', 'sap-client': '421'},
+            headers: authHeader,
+            json: true
+        };
+        const response = await requestp(options);
+        const deserializedData = ObjectMapper.deserialize<FlightModel>(FlightModel, response.d);
+        return new JsonOnlyPayload<FlightModel>(deserializedData);
+    }
 
     public async getCarriers(
         request: express.Request

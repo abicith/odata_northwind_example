@@ -23,6 +23,28 @@ import { CarrierListModel, CarrierModel, FlightListModel, FlightModel } from '..
 export class NorthwindController {
     constructor(@Inject() private northwindService: NorthwindService) { }
 
+    @Get('/Flight/carrierID/:carrid/connectionID/:connid/Datetime/:Fldate')
+    @Authenticated()
+    @Description('get a flight')
+    @Returns(OK, { type: FlightModel })
+    public async getFlight(
+        @Req() req: express.Request,
+        @Required()
+        @Description('ID of carrier')
+        @PathParams('carrid')
+        carrierId: string,
+        @Required()
+        @Description('ID of connection')
+        @PathParams('connid')
+        connId: string,
+        @Required()
+        @Description('Datetime of flight')
+        @PathParams('Fldate')
+        Fldate: string
+    ): Promise<JsonOnlyPayload<FlightModel>> {
+        return this.northwindService.getFlight(req, carrierId, connId, Fldate);
+    }
+
     @Get('/Carriers')
     @Authenticated()
     @Description('Get all carriers')
