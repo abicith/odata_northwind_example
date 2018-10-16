@@ -4,7 +4,7 @@ import { JsonProperty } from 'json-object-mapper';
 import { OrderDetails } from './OrderDetailsModel';
 
 @Description('ProductSummary')
-export class productSummary {
+export class ProductSummary {
     @Description('product ID')
     @JsonProperty({ name: 'ProductID'})
     productID: number = undefined;
@@ -15,14 +15,14 @@ export class productSummary {
 }
 
 @Description('Products List')
-export class productsListModel {
+export class ProductsListModel {
     @Description('Products')
-    @JsonProperty({ name: 'results', type: productSummary })
-    products: productSummary[] =[];
+    @JsonProperty({ name: 'results', type: ProductSummary })
+    products: ProductSummary[] = [];
 }
 
 @Description('northwind Orders model')
-export class northwindOrdersModel  {
+export class NorthwindOrdersModel  {
     @Description('results')
     @JsonProperty({ name: 'results', type: OrderDetails})
     Orders: OrderDetails[] = [];

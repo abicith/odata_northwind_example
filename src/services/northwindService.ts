@@ -2,49 +2,126 @@ import * as requestp from 'request-promise';
 import express = require('express');
 import { Inject, Service } from '@tsed/common';
 import { JsonOnlyPayload } from '../models/JsonOnlyPayload';
-import { productsListModel, productSummary } from '../models/northwindModel';
-import { northwindOrdersModel } from '../models/northwindModel';
+import { ProductsListModel, ProductSummary } from '../models/northwindModel';
+import { NorthwindOrdersModel } from '../models/northwindModel';
 import { ObjectMapper } from 'json-object-mapper';
-
-
+import { CarrierListModel, FlightListModel } from '../models/carriersModel';
+import { UserDeets } from '../../user_details';
 
 @Service()
-export class northwindService {
+export class NorthwindService {
     private newLine = require('os').EOL;
-    
+
+    public async getCarriers(
+        request: express.Request
+    ): Promise<JsonOnlyPayload<CarrierListModel>> {
+        const authHeader = {
+            channel: 'acos',
+            'user-id': request.headers['iv-user'] as string
+        };
+        const loginDeets = new UserDeets;
+        const options = {
+            proxy: 'http://haproxy.csda.gov.au:8080',
+            strictSSL: false,
+            url: `${loginDeets.url}/ZSFLIGHT_PROJECT2_SRV/Carriers`,
+            auth: {
+                'user': loginDeets.uname,
+                'pass': loginDeets.pword,
+                'sendImmediately': true
+            },
+            qs: {$format: 'json', 'sap-client': '421'},
+            headers: authHeader,
+            json: true
+        };
+        const response = await requestp(options);
+        const deserializedData = ObjectMapper.deserialize<CarrierListModel>(CarrierListModel, response.d);
+        return new JsonOnlyPayload<CarrierListModel>(deserializedData);
+    }
+
+    public async getFlights(
+        request: express.Request
+    ): Promise<JsonOnlyPayload<FlightListModel>> {
+        const authHeader = {
+            channel: 'acos',
+            'user-id': request.headers['iv-user'] as string
+        };
+        const loginDeets = new UserDeets;
+        const options = {
+            proxy: 'http://haproxy.csda.gov.au:8080',
+            strictSSL: false,
+            url: `${loginDeets.url}/ZSFLIGHT_PROJECT2_SRV/Flights`,
+            auth: {
+                'user': loginDeets.uname,
+                'pass': loginDeets.pword,
+                'sendImmediately': true
+            },
+            qs: {$format: 'json', 'sap-client': '421'},
+            headers: authHeader,
+            json: true
+        };
+        const response = await requestp(options);
+        const deserializedData = ObjectMapper.deserialize<FlightListModel>(FlightListModel, response.d);
+        return new JsonOnlyPayload<FlightListModel>(deserializedData);
+    }
+
+    public async getFlightsByCarrier(
+        request: express.Request,
+        carrierId: string
+    ): Promise<JsonOnlyPayload<FlightListModel>> {
+        const authHeader = {
+            channel: 'acos',
+            'user-id': request.headers['iv-user'] as string
+        };
+        const loginDeets = new UserDeets;
+        const options = {
+            proxy: 'http://haproxy.csda.gov.au:8080',
+            strictSSL: false,
+            url: `${loginDeets.url}/ZSFLIGHT_PROJECT2_SRV/Carriers('${carrierId}')/Flights`,
+            auth: {
+                'user': loginDeets.uname,
+                'pass': loginDeets.pword,
+                'sendImmediately': true
+            },
+            qs: {$format: 'json', 'sap-client': '421'},
+            headers: authHeader,
+            json: true
+        };
+        const response = await requestp(options);
+        const deserializedData = ObjectMapper.deserialize<FlightListModel>(FlightListModel, response.d);
+        return new JsonOnlyPayload<FlightListModel>(deserializedData);
+    }
+
     public async getProducts(
         request: express.Request
-    ): Promise<JsonOnlyPayload<productsListModel>> {
+    ): Promise<JsonOnlyPayload<ProductsListModel>> {
         const options = {
             proxy: 'http://haproxy.csda.gov.au:8080',
             strictSSL: false,
             url: 'https://services.odata.org/V2/Northwind/Northwind.svc/Current_Product_Lists/',
-            qs: {$format: "json"},
+            qs: {$format: 'json'},
             json: true
-        }
-        
-        var response = await requestp(options);
-               
-        const deserializedData = ObjectMapper.deserialize<productsListModel>(productsListModel, response.d);
-        console.log('The Response Was: '+'\n'+response.d);
-        return new JsonOnlyPayload<productsListModel>(deserializedData);
+        };
+
+        const response = await requestp(options);
+        const deserializedData = ObjectMapper.deserialize<ProductsListModel>(ProductsListModel, response.d);
+        console.log('The Response Was: ' + '\n' + response.d);
+        return new JsonOnlyPayload<ProductsListModel>(deserializedData);
     }
 
     public async getProductsCount(
         request: express.Request
     ): Promise<JsonOnlyPayload<Number>> {
-        var response;
         const options = {
             proxy: 'http://haproxy.csda.gov.au:8080',
             strictSSL: false,
             url: 'https://services.odata.org/V2/Northwind/Northwind.svc/Current_Product_Lists/$count',
-            qs: {$format: "json"},
+            qs: {$format: 'json'},
             json: true
-        }
+        };
 
-        response = await requestp(options);
+        const response = await requestp(options);
 
-        console.log('The Response Was: \n'+response.d);
+        console.log('The Response Was: \n' + response.d);
 
         return new JsonOnlyPayload<Number>(response);
     }
@@ -52,66 +129,64 @@ export class northwindService {
     public async getProduct(
         request: express.Request,
         productId,
-        productName    
-    ): Promise<JsonOnlyPayload<productSummary>> {
-        var response;
-        var productLoc = "https://services.odata.org/V2/Northwind/Northwind.svc/Current_Product_Lists(ProductID="+productId+",ProductName='"+productName+"')/";
+        productName
+    ): Promise<JsonOnlyPayload<ProductSummary>> {
+        const productLoc = `https://services.odata.org/V2/Northwind/Northwind.svc/
+        Current_Product_Lists(ProductID="+productId+",ProductName='"+productName+"')/`;
         const options = {
             proxy: 'http://haproxy.csda.gov.au:8080',
             strictSSL: false,
             url: productLoc,
-            qs: {$format: "json"},
+            qs: {$format: 'json'},
             json: true
-        }
+        };
 
-        var response = await requestp(options);
+        const response = await requestp(options);
 
         console.log('The response was: \n' + response.d);
-        const deserializedData = ObjectMapper.deserialize<productSummary>(productSummary, response.d);
+        const deserializedData = ObjectMapper.deserialize<ProductSummary>(ProductSummary, response.d);
 
-        return new JsonOnlyPayload<productSummary>(deserializedData);
+        return new JsonOnlyPayload<ProductSummary>(deserializedData);
     }
 
     public async getProductName(
         request: express.Request,
         productId
-    ): Promise<JsonOnlyPayload<productsListModel>> {
-        var response;
-        const filter = 'ProductID eq '+productId;
-        var productLoc = "https://services.odata.org/V2/Northwind/Northwind.svc/Current_Product_Lists/";
+    ): Promise<JsonOnlyPayload<ProductsListModel>> {
+        const filter = 'ProductID eq ' + productId;
+        const productLoc = 'https://services.odata.org/V2/Northwind/Northwind.svc/Current_Product_Lists/';
         const options = {
             proxy: 'http://haproxy.csda.gov.au:8080',
             strictSSL: false,
             url: productLoc,
-            qs: {$format: "json", $filter: filter},
+            qs: {$format: 'json', $filter: filter},
             json: true
-        }
+        };
 
-        var response = await requestp(options);
+        const response = await requestp(options);
 
-        const deserializedData = ObjectMapper.deserialize<productsListModel>(productsListModel, response.d);
-        console.log('The Response Was: '+'\n'+response.d);
+        const deserializedData = ObjectMapper.deserialize<ProductsListModel>(ProductsListModel, response.d);
+        console.log('The Response Was: ' + '\n' + response.d);
 
-        return new JsonOnlyPayload<productsListModel>(deserializedData);
+        return new JsonOnlyPayload<ProductsListModel>(deserializedData);
     }
 
     public async getOrderDetails(
         request: express.Request
-    ): Promise<JsonOnlyPayload<northwindOrdersModel>> {
-        var response;
+    ): Promise<JsonOnlyPayload<NorthwindOrdersModel>> {
         const options = {
             proxy: 'http://haproxy.csda.gov.au:8080',
             strictSSL: false,
-            url: "https://services.odata.org/V2/Northwind/Northwind.svc/Order_Details/",
-            qs: {$format: "json", $expand: "Order,Order/Employee"}, 
+            url: 'https://services.odata.org/V2/Northwind/Northwind.svc/Order_Details/',
+            qs: {$format: 'json', $expand: 'Order,Order/Employee'},
             json: true
-        }
+        };
 
-        var response = await requestp(options);
+        const response = await requestp(options);
 
-        console.log('the response was:\n'+response.d);
-        const deserializedData = ObjectMapper.deserialize<northwindOrdersModel>(northwindOrdersModel, response.d);
+        console.log('the response was:\n' + response.d);
+        const deserializedData = ObjectMapper.deserialize<NorthwindOrdersModel>(NorthwindOrdersModel, response.d);
 
-        return new JsonOnlyPayload<northwindOrdersModel>(deserializedData);        
+        return new JsonOnlyPayload<NorthwindOrdersModel>(deserializedData);
     }
 }
